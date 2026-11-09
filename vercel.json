@@ -1,17 +1,18 @@
 {
-  "version": 2,
-  "routes": [
+  "outputDirectory": ".",
+  "headers": [
     {
-      "src": "/sw.js",
-      "headers": {
-        "cache-control": "no-cache",
-        "service-worker-allowed": "/"
-      },
-      "dest": "/sw.js"
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/uv/(.*)",
+      "headers": [
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
     }
   ]
 }
