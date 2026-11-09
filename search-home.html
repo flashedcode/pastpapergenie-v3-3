@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home</title>
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+</head>
+<body class="sh">
+  <div id="clock">00:00:00</div>
+  <form id="home-search">
+    <input id="q" type="text" placeholder="Search or enter URL..." autocomplete="off" spellcheck="false">
+  </form>
+
+  <script>
+    function tick() {
+      var d = new Date();
+      var p = function(n) { return (n < 10 ? '0' : '') + n; };
+      document.getElementById('clock').textContent =
+        p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    function resolve(input) {
+      var q = input.trim();
+      if (!q) return null;
+      if (/^https?:\/\//i.test(q)) return q;
+      if (q.indexOf(' ') === -1 && q.indexOf('.') !== -1) return 'https://' + q;
+      return 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
+    }
+    function send(url) {
+      parent.postMessage({ type: 'dotgui-go', url: url }, '*');
+    }
+    document.getElementById('home-search').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var url = resolve(document.getElementById('q').value);
+      if (url) send(url);
+    });
+
+  </script>
+</body>
+</html>

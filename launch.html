@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pastpapergenie v3</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="page">
+<header>
+<p class="logo"><a href="start.html">pastpapergenie <small>v3</small></a></p>
+<p class="blurb">Browser games and web search. follow @xrompf on tiktok</p>
+</header>
+
+  <div id="games">
+    <main>
+      <h1>Launching pastpapergenie v3...</h1>
+      <p id="launch-status">Opening pastpapergenie v3 automatically. If it does not appear, allow pop-ups and try again.</p>
+      <button class="go" id="launch-button" type="button">Launch</button>
+    </main>
+  </div>
+
+  <script>
+    function launch() {
+      const status = document.getElementById('launch-status');
+
+      const win = window.open('about:blank', '_blank');
+
+      if (!win) {
+        if (status) {
+          status.textContent = 'Popup blocked. Allow pop-ups or click the button below to open pastpapergenie v3.';
+        }
+        return;
+      }
+
+      win.document.open();
+      win.document.write(`
+        <!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>pastpapergenie v3</title>
+</head>
+          <body>
+            <iframe src="start.html" title="pastpapergenie v3"></iframe>
+          </body>
+        </html>
+      `);
+      win.document.close();
+      win.focus();
+
+      if (status) {
+        status.textContent = 'pastpapergenie v3 is opening in a new tab.';
+      }
+    }
+
+    document.getElementById('launch-button').addEventListener('click', launch);
+    window.addEventListener('load', () => {
+      setTimeout(launch, 250);
+    });
+  </script>
+<footer><p>Licence problem or takedown request: contact details are being set up and will be here soon.</p></footer>
+</div>
+</body>
+</html>

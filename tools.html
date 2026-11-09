@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Tools - pastpapergenie v3</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="monetag" content="15a3704e2aea6a5d47439bb5b4b6c144">
+    <script src="theme.js"></script> 
+  </head>
+  <body>
+<div id="page">
+<header>
+<p class="logo"><a href="start.html">pastpapergenie <small>v3</small></a></p>
+<p class="blurb">Browser games and web search. follow @xrompf on tiktok</p>
+</header>
+<nav>
+<a href="start.html">Home</a>
+<a href="select.html">Games</a>
+<a href="anime.html">Anime</a>
+<a href="movies.html">Movies/Series</a>
+<a href="search.html">Search</a>
+<a href="tools.html" class="start" aria-current="page">Tools</a>
+<a href="settings.html">Settings</a>
+<a href="about-us.html">About Us</a>
+</nav>
+
+    <div id="games">
+      <main>
+        <h1>Tools</h1>
+        <div id="tool-buttons">
+        <button class="button" onclick="window.location.href='pages/tool-pages/simplecalculator.html'">
+          <img loading="lazy" src="media/tool-buttons/calc.jpg" alt="Calculator" style="width:130px;height:130px;">
+        </button>
+        <button class="button" onclick="window.location.href='pages/tool-pages/pico.html'">
+          <img loading="lazy" src="media/tool-buttons/pico8.png" alt="Pico 8" style="width:130px;height:130px;">
+        </button>
+        </div>
+      </main>
+    </div>
+  <script>
+          // dotgui-panic: global panic key, guards typing
+          document.addEventListener('keydown', function(e) {
+            var t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+            var key = '';
+            try { key = localStorage.getItem('dotgui_panic_key') || 'k'; } catch (err) { key = 'k'; }
+            if ((e.key || '').toLowerCase() !== (key || '').toLowerCase() || !key) return;
+            try {
+              document.title = 'Google';
+              var f = document.querySelector("link[rel~='icon']");
+              if (f) f.href = 'https://www.google.com/favicon.ico';
+            } catch (err) {}
+            var go = true, url = 'https://classroom.google.com';
+            try {
+              go = (localStorage.getItem('dotgui_panic_redirect') || 'true') === 'true';
+              url = localStorage.getItem('dotgui_panic_url') || url;
+            } catch (err) {}
+            if (go && url) window.location.href = url;
+          });
+        </script>
+<footer><p>Licence problem or takedown request: contact details are being set up and will be here soon.</p></footer>
+</div>
+</body>
+  <script>
+    // Tab cloaker script for all pages except search
+    (function() {
+      const value = localStorage.getItem('tabCloaker') || 'default';
+      const favicon = document.querySelector("link[rel~='icon']") || (() => {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+        return link;
+      })();
+      if (value === 'google') {
+        document.title = 'Google';
+        favicon.href = 'https://www.google.com/favicon.ico';
+      } else if (value === 'vocab') {
+        document.title = 'My Learning | Vocabulary.com';
+        favicon.href = 'https://www.vocabulary.com/favicon.ico';
+      } else if (value === 'canvas') {
+          document.title = 'Canvas';
+          favicon.href = 'https://canvas.instructure.com/favicon.ico';
+        } else if (value === 'drive') {
+          document.title = 'Google Drive';
+          favicon.href = 'https://drive.google.com/favicon.ico';
+        } else if (value === 'docs') {
+          document.title = 'Google Docs';
+          favicon.href = 'https://docs.google.com/favicon.ico';
+        } else {
+        favicon.href = 'favicon.ico';
+      }
+    })();
+  </script>
+  <script>
+    document.querySelectorAll('#tool-buttons .button').forEach(function(b) {
+      var im = b.querySelector('img');
+      var label = document.createElement('span');
+      label.className = 'tile-label';
+      label.textContent = im ? (im.getAttribute('alt') || '') : '';
+      label.title = label.textContent;
+      b.appendChild(label);
+    });
+  </script>
+</html>
