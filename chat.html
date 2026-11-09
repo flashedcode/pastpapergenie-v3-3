@@ -37,6 +37,14 @@ aside{flex:none;width:190px;overflow-y:auto;padding-bottom:8px;background:var(--
 .x{display:none;margin-left:6px;padding:0 5px;font-size:11px}.msg:hover .x{display:inline-block}
 #typing{min-height:20px;padding:0 12px;color:var(--muted);font-size:12px}
 #text{flex:1}#membtn{display:none}
+#dir{flex:1;min-height:0;overflow-y:auto;padding:8px 12px}
+#dtop{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+#dsearch{flex:1 1 200px;max-width:320px}#dcount{color:var(--muted)}
+#dlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.mc{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);background:var(--page);border-radius:var(--r)}.mc.off{opacity:.7}
+.dav{position:relative;display:flex;flex:none;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;color:#fff;font-weight:bold;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.ddot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid var(--page);background:#2a9a2a}
+.nm{font-weight:bold;overflow-wrap:anywhere}.sub{font-size:11px;color:var(--muted)}
 @media(max-width:720px){aside{width:120px}#members{display:none;position:absolute;top:0;right:0;bottom:0;z-index:3;width:170px;box-shadow:-2px 0 8px rgba(0,0,0,.25)}#members.show{display:block}#membtn{display:inline-block}}
 </style>
 </head>
@@ -57,12 +65,15 @@ aside{flex:none;width:190px;overflow-y:auto;padding-bottom:8px;background:var(--
 <div id="auth" hidden>
   <form id="authform" class="card">
     <h1 id="atitle">Log in</h1>
-    <label for="u">Username</label><input id="u" maxlength="20" autocomplete="username" required>
-    <p class="note" id="unote" hidden>3 to 20 letters, numbers or underscores.</p>
-    <label for="p">Password</label><input id="p" type="password" maxlength="128" autocomplete="current-password" required>
-    <p class="note" id="pnote" hidden>At least 8 characters. There is no password reset, so remember it.</p>
+    <div id="urow"><label for="u" id="ulabel">Username or email</label><input id="u" maxlength="254" autocomplete="username" required>
+    <p class="note" id="unote" hidden>3 to 20 letters, numbers or underscores.</p></div>
+    <div id="prow"><label for="p" id="plabel">Password</label><input id="p" type="password" maxlength="128" autocomplete="current-password" required>
+    <p class="note" id="pnote" hidden>At least 8 characters.</p></div>
+    <div id="erow" hidden><label for="e" id="elabel">Email (optional)</label><input id="e" type="email" maxlength="254" autocomplete="email">
+    <p class="note" id="enote">Never shown to other users. Lets you reset a forgotten password. If you add one, you log in with that email instead of your username.</p></div>
     <p id="err" class="err"></p>
-    <p><button class="go" id="asubmit">Log in</button> <a href="#" id="swap">Create an account</a></p>
+    <p id="ok" class="note"></p>
+    <p><button class="go" id="asubmit">Log in</button> <a href="#" id="swap">Create an account</a> <a href="#" id="forgot">Forgot password?</a></p>
   </form>
 </div>
 
@@ -73,6 +84,10 @@ aside{flex:none;width:190px;overflow-y:auto;padding-bottom:8px;background:var(--
       <strong id="rname"></strong><span id="status"></span><span class="sp"></span>
       <label for="color">Colour</label><select id="color"></select>
       <button id="membtn" type="button">Members</button><button id="out" type="button">Log out</button>
+    </div>
+    <div id="dir" hidden>
+      <div id="dtop"><input id="dsearch" type="text" placeholder="Search members" aria-label="Search members" autocomplete="off"><span id="dcount"></span></div>
+      <div id="dlist"></div>
     </div>
     <div id="log"></div>
     <div id="typing"></div>
@@ -94,6 +109,7 @@ const $ = s => document.querySelector(s);
 const h = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
 let sb, me, room = 'general', token = 0, chan = null, lobby = null;
 let profiles = {}, onlineIds = new Set(), typers = {}, mode = 'login', lastTyping = 0;
+let recovering = /type=recovery/.test(location.hash);
 
 const setStatus = t => { $('#status').textContent = t; };
 const flash = t => { setStatus(t); setTimeout(() => setStatus(''), 3000); };
@@ -110,15 +126,16 @@ function loadLib(cb) {
 async function ensureProfiles(ids) {
   const need = [...new Set(ids)].filter(i => i && !profiles[i]);
   if (!need.length) return;
-  const { data } = await sb.from('profiles').select('id,username,color,is_admin').in('id', need);
+  const { data } = await sb.from('profiles').select('id,username,color,is_admin,created_at').in('id', need);
   (data || []).forEach(p => { profiles[p.id] = p; });
 }
 
 async function boot() {
+  if (recovering) { setMode('reset'); return; }
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { $('#auth').hidden = false; $('#chat').hidden = true; return; }
-  const { data: prof } = await sb.from('profiles').select('id,username,color,is_admin').eq('id', session.user.id).maybeSingle();
-  if (!prof) { await sb.auth.signOut(); $('#auth').hidden = false; return; }   // e.g. leftover anonymous session
+  if (!session) { setMode('login'); return; }
+  const { data: prof } = await sb.from('profiles').select('id,username,color,is_admin,created_at').eq('id', session.user.id).maybeSingle();
+  if (!prof) { await sb.auth.signOut(); setMode('login'); return; }   // e.g. leftover anonymous session
   me = prof; profiles[me.id] = me;
   $('#auth').hidden = true; $('#chat').hidden = false;
 
@@ -127,11 +144,11 @@ async function boot() {
   if (!names.includes(room)) room = names[0] || 'general';
   $('#rooms').replaceChildren(h('h2', '', 'Rooms'), ...names.map(n => {
     const b = h('button', 'item', '# ' + n); b.dataset.room = n; b.onclick = () => goRoom(n); return b;
-  }));
+  }), h('h2', '', 'People'), (() => { const b = h('button', 'item', 'Members'); b.dataset.view = 'members'; b.onclick = showMembers; return b; })());
   $('#color').replaceChildren(...COLORS.map(([n, c]) => { const o = h('option', '', n); o.value = c; return o; }));
   $('#color').value = me.color;
 
-  const { data: all } = await sb.from('profiles').select('id,username,color,is_admin').order('username').limit(1000);
+  const { data: all } = await sb.from('profiles').select('id,username,color,is_admin,created_at').order('username').limit(1000);
   (all || []).forEach(p => { profiles[p.id] = p; });
   startLobby();
   goRoom(room);
@@ -156,7 +173,7 @@ function startLobby() {
 
 async function goRoom(n) {
   const my = ++token;
-  room = n; typers = {};
+  setView('chat'); room = n; typers = {};
   $('#log').replaceChildren(); $('#typing').textContent = ''; $('#rname').textContent = '# ' + n;
   document.querySelectorAll('.item').forEach(b => b.classList.toggle('on', b.dataset.room === n));
 
@@ -215,7 +232,36 @@ function renderMembers() {
       d.style.background = u.color; r.append(d, h('span', '', u.username + (u.is_admin ? ' ★' : ''))); box.append(r);
     }
   }
+  const lb = h('button', 'item', 'All members →'); lb.onclick = showMembers; box.append(lb);
+  if (!$('#dir').hidden) renderDirectory();
 }
+
+function setView(v) {
+  const d = v === 'members';
+  $('#dir').hidden = !d; $('#log').hidden = d; $('#typing').hidden = d; $('#send').hidden = d;
+}
+function showMembers() {
+  setView('members'); $('#rname').textContent = 'Members';
+  document.querySelectorAll('.item').forEach(b => b.classList.toggle('on', b.dataset.view === 'members'));
+  $('#members').classList.remove('show');
+  renderDirectory();
+}
+function renderDirectory() {
+  const q = $('#dsearch').value.trim().toLowerCase();
+  const list = Object.values(profiles).filter(p => !q || p.username.toLowerCase().includes(q))
+    .sort((a, b) => (onlineIds.has(b.id) - onlineIds.has(a.id)) || a.username.localeCompare(b.username));
+  $('#dcount').textContent = list.length + (list.length === 1 ? ' member' : ' members') + ' · ' + onlineIds.size + ' online';
+  const box = $('#dlist'); box.replaceChildren();
+  for (const p of list) {
+    const on = onlineIds.has(p.id), c = h('div', 'mc' + (on ? '' : ' off')), av = h('div', 'dav', p.username[0].toUpperCase()), t = h('div');
+    av.style.background = p.color;
+    if (on) { const d = h('span', 'ddot'); d.title = 'Online'; av.append(d); }
+    t.append(h('div', 'nm', p.username + (p.is_admin ? ' ★' : '')),
+      h('div', 'sub', on ? 'Online now' : p.created_at ? 'Joined ' + new Date(p.created_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : 'Offline'));
+    c.append(av, t); box.append(c);
+  }
+}
+$('#dsearch').oninput = renderDirectory;
 
 function renderTyping() {
   const n = Object.keys(typers).filter(k => Date.now() - typers[k] < 4000);
@@ -244,46 +290,83 @@ $('#color').onchange = async e => {
 $('#out').onclick = () => sb.auth.signOut().then(() => location.reload());
 $('#membtn').onclick = () => $('#members').classList.toggle('show');
 
-$('#swap').onclick = e => {
-  e.preventDefault();
-  mode = mode === 'login' ? 'register' : 'login';
-  const r = mode === 'register';
-  $('#atitle').textContent = $('#asubmit').textContent = r ? 'Create account' : 'Log in';
-  $('#swap').textContent = r ? 'I already have an account' : 'Create an account';
-  $('#unote').hidden = $('#pnote').hidden = !r;
-  $('#p').autocomplete = r ? 'new-password' : 'current-password'; $('#err').textContent = '';
-};
+function setMode(m) {
+  mode = m;
+  const L = m === 'login', R = m === 'register', F = m === 'forgot', X = m === 'reset';
+  $('#atitle').textContent = L ? 'Log in' : R ? 'Create account' : F ? 'Reset password' : 'Choose a new password';
+  $('#asubmit').textContent = L ? 'Log in' : R ? 'Create account' : F ? 'Send reset link' : 'Save password';
+  $('#urow').hidden = F || X; $('#prow').hidden = F; $('#erow').hidden = !(R || F);
+  $('#ulabel').textContent = R ? 'Username' : 'Username or email';
+  $('#plabel').textContent = X ? 'New password' : 'Password';
+  $('#elabel').textContent = F ? 'Email' : 'Email (optional)';
+  $('#unote').hidden = !R; $('#pnote').hidden = !(R || X); $('#enote').hidden = F;
+  $('#u').required = !(F || X); $('#p').required = !F; $('#e').required = F;
+  $('#p').autocomplete = (R || X) ? 'new-password' : 'current-password';
+  $('#swap').hidden = X; $('#swap').textContent = L ? 'Create an account' : 'Back to log in';
+  $('#forgot').hidden = !L;
+  $('#err').textContent = ''; $('#ok').textContent = '';
+  $('#auth').hidden = false; $('#chat').hidden = true;
+}
+$('#swap').onclick = e => { e.preventDefault(); setMode(mode === 'login' ? 'register' : 'login'); };
+$('#forgot').onclick = e => { e.preventDefault(); setMode('forgot'); };
 
 $('#authform').onsubmit = async e => {
   e.preventDefault();
-  const err = $('#err'), btn = $('#asubmit');
-  const u = $('#u').value.trim(), pw = $('#p').value;
-  err.textContent = '';
-  if (!/^[A-Za-z0-9_]{3,20}$/.test(u)) { err.textContent = 'Username must be 3 to 20 letters, numbers or underscores.'; return; }
-  if (mode === 'register' && pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
-  const email = u.toLowerCase() + '@' + EMAIL_DOMAIN;
+  const err = $('#err'), ok = $('#ok'), btn = $('#asubmit');
+  const u = $('#u').value.trim(), pw = $('#p').value, em = $('#e').value.trim().toLowerCase();
+  const UNAME = /^[A-Za-z0-9_]{3,20}$/;
+  err.textContent = ''; ok.textContent = '';
   btn.disabled = true;
   try {
-    let r;
-    if (mode === 'register') r = await sb.auth.signUp({ email, password: pw, options: { data: { username: u } } });
-    else r = await sb.auth.signInWithPassword({ email, password: pw });
-    if (r.error) {
-      const m = r.error.message || '';
-      err.textContent = /already registered|Database error|duplicate/i.test(m) ? 'That username is taken.'
-        : /invalid login/i.test(m) ? 'Wrong username or password.'
-        : /rate limit|too many/i.test(m) ? 'Too many attempts. Wait a minute and try again.'
-        : m;
-    } else if (!r.data.session) {
-      err.textContent = 'Account created, but email confirmation is still switched on in Supabase. Turn it off (see setup notes).';
+    if (mode === 'forgot') {
+      const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+      if (error) err.textContent = /rate limit|too many|seconds/i.test(error.message) ? 'Too many requests. Wait a few minutes and try again.' : error.message;
+      else ok.textContent = 'If an account uses that email, a reset link is on its way. Check your spam folder too.';
+    } else if (mode === 'reset') {
+      if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) err.textContent = error.message;
+      else { recovering = false; history.replaceState(null, '', location.pathname); $('#p').value = ''; await boot(); }
+    } else if (mode === 'register') {
+      if (!UNAME.test(u)) { err.textContent = 'Username must be 3 to 20 letters, numbers or underscores.'; return; }
+      if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
+      if (em && !$('#e').checkValidity()) { err.textContent = 'Enter a valid email, or leave it blank.'; return; }
+      const email = em || u.toLowerCase() + '@' + EMAIL_DOMAIN;
+      const r = await sb.auth.signUp({ email, password: pw, options: { data: { username: u } } });
+      if (r.error) {
+        const m = r.error.message || '';
+        err.textContent = /already registered/i.test(m) ? (em ? 'That email already has an account. Log in with it, or use a different one.' : 'That username is taken.')
+          : /Database error|duplicate/i.test(m) ? 'That username is taken.'
+          : /rate limit|too many/i.test(m) ? 'Too many attempts. Wait a minute and try again.'
+          : /invalid/i.test(m) ? 'Supabase rejected that email address. Try another, or leave it blank.'
+          : m;
+      } else if (!r.data.session) {
+        err.textContent = 'Account created, but email confirmation is still switched on in Supabase. Turn it off (see setup notes).';
+      } else { $('#p').value = ''; await boot(); }
     } else {
-      $('#p').value = '';
-      await boot();
+      const email = u.includes('@') ? u.toLowerCase() : UNAME.test(u) ? u.toLowerCase() + '@' + EMAIL_DOMAIN : null;
+      if (!email) { err.textContent = 'Enter your username, or the email you signed up with.'; return; }
+      const r = await sb.auth.signInWithPassword({ email, password: pw });
+      if (r.error) {
+        const m = r.error.message || '';
+        err.textContent = /invalid login/i.test(m) ? 'Wrong username or password. If you signed up with an email, log in with that email.'
+          : /rate limit|too many/i.test(m) ? 'Too many attempts. Wait a minute and try again.' : m;
+      } else { $('#p').value = ''; await boot(); }
     }
   } catch (x) { err.textContent = 'Could not reach the chat server.'; }
-  btn.disabled = false;
+  finally { btn.disabled = false; }
 };
 
-loadLib(() => { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); boot(); });
+loadLib(() => {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') { recovering = true; setMode('reset'); } });
+  boot().then(() => {
+    if (/error_code=otp_expired|error=access_denied/.test(location.hash)) {
+      history.replaceState(null, '', location.pathname);
+      if (!me) { setMode('login'); $('#err').textContent = 'That reset link has expired. Use Forgot password to get a new one.'; }
+    }
+  });
+});
 
 // Same tab cloak + panic key as the other pages
 (function () {
