@@ -77,9 +77,9 @@
       <button onclick="goFullscreen()">Fullscreen</button>
       <span id="core-status"></span>
     </div>
-    <script src="../../scramjet/scramjet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@3.0.1/dist/index.js"></script>
-    <script src="../../core/dgcore.js?v=14"></script>
+    <script src="../../baremux/index.js"></script>
+    <script src="../../uv/uv.bundle.js"></script>
+    <script src="../../uv/uv.config.js"></script>
     <script>
         var DG_DATA_URL = "https://data.vinetrap.net/";
         var DG_GAME_URL = "https://orchard.vinetrap.net/";
@@ -93,11 +93,20 @@
             dgStatus("Loading...");
             try { document.getElementById("proceedBtn").disabled = true; } catch (e) {}
             try {
-                var html = await DgCore.load(url, 1);
-                document.getElementById("gameEmbed").srcdoc = html;
+                if ("serviceWorker" in navigator) {
+                    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+                    await navigator.serviceWorker.ready;
+                }
+                var bareMux = new BareMux.BareMuxConnection("/baremux/worker.js");
+                await bareMux.setTransport("/epoxy/index.mjs", [{ wisp: "wss://wisp-server-workers.dotlyhiyou.workers.dev/" }]);
+                var uvUrl = (typeof __uv$config !== "undefined" && __uv$config.encodeUrl)
+                    ? (__uv$config.prefix + __uv$config.encodeUrl(url))
+                    : ("/service/" + encodeURIComponent(url));
+                document.getElementById("gameEmbed").src = uvUrl;
                 dgStage = stage;
                 dgStatus(stage === "data" ? "Upload data.win to get a code, then hit Proceed." : "");
             } catch (e) {
+                console.error(e);
                 dgStatus("Load failed. Check connection and hit Restart.");
             }
             try { document.getElementById("proceedBtn").disabled = false; } catch (e) {}

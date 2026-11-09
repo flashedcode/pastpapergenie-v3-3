@@ -1,0 +1,6 @@
+{
+  "name": "pastpapergenie v3",
+  "description": "Browser games, web search proxy with Ultraviolet, chatrooms, and study tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
