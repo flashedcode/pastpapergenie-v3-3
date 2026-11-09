@@ -1,215 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chat - pastpapergenie v3</title>
-<link rel="icon" href="favicon.ico" />
-<link rel="stylesheet" href="styles.css" />
-<script src="theme.js"></script>
-<style>
-#auth{display:flex;flex:1;align-items:center;justify-content:center;padding:16px;background:var(--page)}
-.card{width:100%;max-width:340px;padding:0 12px 6px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r);overflow:hidden}
-.card h1,aside h2{margin:0 -12px 8px;padding:4px 12px;font:bold 13px var(--font);color:#fff;background:linear-gradient(var(--bar1),var(--bar2));text-shadow:0 1px 1px rgba(0,0,0,.45)}
-aside h2{margin:0 0 4px;padding:4px 10px}
-.card label{display:block;margin:8px 0 2px}
-input{font:inherit;padding:3px 6px;border:1px solid var(--bline);border-radius:var(--r);background:#fff;color:#111}
-.card input{width:100%}
-.note{margin:4px 0;color:var(--muted);font-size:12px}
-.err{min-height:1.5em;margin:6px 0;color:#d03b3b}
-#chat{position:relative;display:flex;flex:1;min-height:0;background:var(--page)}
-aside{flex:none;width:190px;overflow-y:auto;padding-bottom:8px;background:var(--panel)}
-#rooms{border-right:1px solid var(--line)}#members{border-left:1px solid var(--line)}
-.item{display:block;width:100%;padding:3px 10px;text-align:left;color:var(--ink);background:none;border:0;border-radius:0;box-shadow:none}
-.item.on{color:#fff;font-weight:bold;background:linear-gradient(var(--bar1),var(--bar2))}
-.m{display:flex;gap:6px;align-items:center;padding:2px 10px}.m.off{opacity:.55}
-.dot{width:10px;height:10px;flex:none;border-radius:50%}
-#center{display:flex;flex:1;flex-direction:column;min-width:0}
-#top,#send{display:flex;gap:8px;align-items:center;padding:6px 10px;background:var(--panel)}
-#top{border-bottom:1px solid var(--line)}#send{border-top:1px solid var(--line)}
-#top .sp{flex:1}#status{color:var(--muted);font-size:12px}
-#log{flex:1;overflow-y:auto;padding:8px 12px}
-.msg{display:flex;gap:8px;margin:0 0 8px}
-.av{display:flex;flex:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:bold;text-shadow:0 1px 1px rgba(0,0,0,.4)}
-.who{font-weight:bold}.ts{margin-left:6px;color:var(--muted);font-size:11px}
-.body{overflow-wrap:anywhere;white-space:pre-wrap}
-.x{display:none;margin-left:6px;padding:0 5px;font-size:11px}.msg:hover .x{display:inline-block}
-#typing{min-height:20px;padding:0 12px;color:var(--muted);font-size:12px}
-#text{flex:1}#membtn{display:none}
-@media(max-width:720px){aside{width:120px}#members{display:none;position:absolute;top:0;right:0;bottom:0;z-index:3;width:170px;box-shadow:-2px 0 8px rgba(0,0,0,.25)}#members.show{display:block}#membtn{display:inline-block}}
-</style>
-</head>
-<body class="app">
+  <head>
+    <title>Chat - pastpapergenie v3</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="monetag" content="15a3704e2aea6a5d47439bb5b4b6c144">
+    <script src="theme.js"></script>
+    <style>
+      #chat-status{margin:6px 0;color:var(--muted);min-height:1.5em}
+      #chat-log{height:55vh;overflow-y:auto;padding:8px 10px;border:1px solid var(--line);background:var(--page);border-radius:var(--r)}
+      .msg{padding:3px 0;overflow-wrap:anywhere}
+      .msg .who{font-weight:bold;color:var(--link);margin-right:6px}
+      .msg .time{font-size:11px;color:var(--muted);margin-left:6px}
+      .msg.mine .who{text-decoration:underline}
+      #chat-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+      #chat-name{flex:0 1 150px}
+      #chat-msg{flex:1 1 220px;min-width:0}
+      #chat-err{min-height:1.5em;color:#b00020;margin:6px 0 0}
+      #chat-rules{font-size:12px;color:var(--muted)}
+    </style>
+  </head>
+  <body>
 <div id="page">
+<header>
+<p class="logo"><a href="start.html">pastpapergenie <small>v3</small></a></p>
+<p class="blurb">Browser games and web search. follow @xrompf on tiktok</p>
+</header>
 <nav>
 <a href="start.html">Home</a>
 <a href="select.html">Games</a>
 <a href="anime.html">Anime</a>
 <a href="movies.html">Movies/Series</a>
 <a href="search.html">Search</a>
-<a href="chat.html" class="start" aria-current="page">Chat</a>
 <a href="tools.html">Tools</a>
+<a href="chat.html" class="start" aria-current="page">Chat</a>
 <a href="settings.html">Settings</a>
 <a href="about-us.html">About us</a>
 </nav>
 
-<div id="auth" hidden>
-  <form id="authform" class="card">
-    <h1 id="atitle">Log in</h1>
-    <label for="u">Username</label><input id="u" maxlength="20" autocomplete="username" required>
-    <label for="p">Password</label><input id="p" type="password" maxlength="128" autocomplete="current-password" required>
-    <div id="erow" hidden>
-      <label for="e">Email (optional)</label><input id="e" type="email" maxlength="254" autocomplete="email">
-      <p class="note">Never shown to other users. Without one, a lost password can't be recovered.</p>
+    <div id="games">
+      <main>
+        <h1>Community chat</h1>
+        <p id="chat-status" aria-live="polite">Connecting...</p>
+        <div id="chat-log" role="log" aria-live="polite"></div>
+        <form id="chat-form" autocomplete="off">
+          <input id="chat-name" type="text" maxlength="24" placeholder="Username" aria-label="Username" required>
+          <input id="chat-msg" type="text" maxlength="500" placeholder="Write a message" aria-label="Message" required>
+          <button id="chat-send" class="go" disabled>Send</button>
+        </form>
+        <p id="chat-err" role="alert"></p>
+        <p id="chat-rules">Be kind. Spam and abuse get messages removed and users banned.</p>
+      </main>
     </div>
-    <p id="err" class="err"></p>
-    <p><button class="go" id="asubmit">Log in</button> <a href="#" id="swap">Create an account</a></p>
-  </form>
+
+    <!-- Local copy first (school networks often block CDNs): put the file at vendor/supabase.js -->
+    <script src="vendor/supabase.js"></script>
+    <script>
+      (function () {
+        var SUPABASE_URL = 'https://rdmvncnjmnpjqixfuzpt.supabase.co';
+        var SUPABASE_KEY = 'sb_publishable_rlTlh1l60XasCYbApw1QcA_zWU33wgM'; // publishable key only
+        var ROOM = 'general', MAX_ON_SCREEN = 200;
+
+        var $ = function (id) { return document.getElementById(id); };
+        var log = $('chat-log'), form = $('chat-form'), nameEl = $('chat-name'), msgEl = $('chat-msg'),
+            sendBtn = $('chat-send'), errEl = $('chat-err'), statusEl = $('chat-status');
+        var seen = {}, myId = null, sb = null;
+
+        try { nameEl.value = localStorage.getItem('chat-name') || ''; } catch (e) {}
+
+        function loadLib(cb) {
+          if (window.supabase && window.supabase.createClient) return cb();
+          var s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+          s.onload = cb;
+          s.onerror = function () { statusEl.textContent = 'Could not load the chat library. Your network may be blocking it.'; };
+          document.head.appendChild(s);
+        }
+
+        function render(m) {
+          if (seen[m.id]) return;
+          seen[m.id] = true;
+          var row = document.createElement('div');
+          row.className = 'msg' + (m.user_id === myId ? ' mine' : '');
+          var who = document.createElement('span'); who.className = 'who'; who.textContent = m.username;
+          var txt = document.createElement('span'); txt.textContent = m.content;   // never innerHTML
+          var time = document.createElement('span'); time.className = 'time';
+          time.textContent = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          row.appendChild(who); row.appendChild(txt); row.appendChild(time);
+          var atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+          log.appendChild(row);
+          while (log.children.length > MAX_ON_SCREEN) log.removeChild(log.firstChild);
+          if (atBottom) log.scrollTop = log.scrollHeight;
+        }
+
+        async function start() {
+          sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+          var s = (await sb.auth.getSession()).data.session;
+          if (!s) {
+            var r = await sb.auth.signInAnonymously();
+            if (r.error) { statusEl.textContent = 'Could not connect: ' + r.error.message; return; }
+            s = r.data.session;
+          }
+          myId = s.user.id;
+
+          var h = await sb.from('messages').select('*').eq('room', ROOM)
+            .order('created_at', { ascending: false }).limit(50);
+          if (h.error) { statusEl.textContent = 'Could not load messages: ' + h.error.message; return; }
+          h.data.reverse().forEach(render);
+          log.scrollTop = log.scrollHeight;
+
+          sb.channel('room-' + ROOM)
+            .on('postgres_changes',
+              { event: 'INSERT', schema: 'public', table: 'messages', filter: 'room=eq.' + ROOM },
+              function (p) { render(p.new); })
+            .subscribe(function (st) {
+              if (st === 'SUBSCRIBED') statusEl.textContent = 'Live';
+              else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') statusEl.textContent = 'Reconnecting...';
+            });
+
+          sendBtn.disabled = false;
+        }
+
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          errEl.textContent = '';
+          var username = nameEl.value.trim(), content = msgEl.value.trim();
+          if (!username || !content || !sb) return;
+          try { localStorage.setItem('chat-name', username); } catch (e2) {}
+          sendBtn.disabled = true;
+          var r = await sb.from('messages').insert({ room: ROOM, username: username, content: content });
+          sendBtn.disabled = false;
+          if (r.error) errEl.textContent = r.error.message;
+          else { msgEl.value = ''; msgEl.focus(); }
+        });
+
+        loadLib(start);
+      })();
+    </script>
+  <script>
+          // dotgui-panic: global panic key, guards typing
+          document.addEventListener('keydown', function(e) {
+            var t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+            var key = '';
+            try { key = localStorage.getItem('dotgui_panic_key') || 'k'; } catch (err) { key = 'k'; }
+            if ((e.key || '').toLowerCase() !== (key || '').toLowerCase() || !key) return;
+            try {
+              document.title = 'Google';
+              var f = document.querySelector("link[rel~='icon']");
+              if (f) f.href = 'https://www.google.com/favicon.ico';
+            } catch (err) {}
+            var go = true, url = 'https://classroom.google.com';
+            try {
+              go = (localStorage.getItem('dotgui_panic_redirect') || 'true') === 'true';
+              url = localStorage.getItem('dotgui_panic_url') || url;
+            } catch (err) {}
+            if (go && url) window.location.href = url;
+          });
+        </script>
+<footer><p>Licence problem or takedown request: contact details are being set up and will be here soon.</p></footer>
 </div>
-
-<div id="chat" hidden>
-  <aside id="rooms"></aside>
-  <section id="center">
-    <div id="top">
-      <strong id="rname"></strong><span id="status"></span><span class="sp"></span>
-      <label for="color">Colour</label><select id="color"></select>
-      <button id="membtn" type="button">Members</button><button id="out" type="button">Log out</button>
-    </div>
-    <div id="log"></div>
-    <div id="typing"></div>
-    <form id="send"><input id="text" maxlength="500" placeholder="Message" autocomplete="off"><button class="go">Send</button></form>
-  </section>
-  <aside id="members"></aside>
-</div>
-</div>
-
-<script>
-const $ = s => document.querySelector(s);
-const h = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
-const NAMES = ['Blue', 'Pink', 'Green', 'Gold', 'Purple', 'Teal', 'Orange', 'Red']; // same order as COLORS in src/index.js
-let me, ws, room = 'general', typers = {}, retry = 0, mode = 'login', lastTyping = 0;
-
-const api = async (p, body) => {
-  const r = await fetch('/api/' + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
-  return { ok: r.ok, ...(await r.json().catch(() => ({}))) };
-};
-const send = o => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
-const setStatus = t => { $('#status').textContent = t; };
-
-async function boot() {
-  const r = await api('me');
-  if (!r.ok) { $('#auth').hidden = false; return; }
-  me = r.user;
-  $('#auth').hidden = true; $('#chat').hidden = false;
-  $('#rooms').replaceChildren(h('h2', '', 'Rooms'), ...r.rooms.map(n => {
-    const b = h('button', 'item', '# ' + n); b.dataset.room = n; b.onclick = () => goRoom(n); return b;
-  }));
-  $('#color').replaceChildren(...r.colors.map((c, i) => { const o = h('option', '', NAMES[i] || c); o.value = c; return o; }));
-  $('#color').value = me.color;
-  goRoom(room); connect();
-}
-
-function goRoom(n) {
-  room = n; typers = {};
-  $('#log').replaceChildren(); $('#typing').textContent = ''; $('#rname').textContent = '# ' + n;
-  document.querySelectorAll('.item').forEach(b => b.classList.toggle('on', b.dataset.room === n));
-  send({ t: 'join', room: n });
-}
-
-function connect() {
-  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws');
-  ws.onopen = () => { retry = 0; setStatus(''); send({ t: 'join', room }); };
-  ws.onmessage = e => { if (e.data !== 'pong') on(JSON.parse(e.data)); };
-  ws.onclose = async () => {
-    setStatus('Reconnecting…');
-    if (!(await api('me').catch(() => ({ ok: true }))).ok) return location.reload();
-    setTimeout(connect, Math.min(10000, 1000 * ++retry));
-  };
-}
-setInterval(() => ws && ws.readyState === 1 && ws.send('ping'), 30000);
-
-function on(m) {
-  if (m.t === 'history' && m.room === room) {
-    $('#log').replaceChildren(); m.msgs.forEach(add); $('#log').scrollTop = 1e9;
-  } else if (m.t === 'msg' && m.room === room) add(m.m);
-  else if (m.t === 'del') document.querySelector('[data-id="' + m.id + '"]')?.remove();
-  else if (m.t === 'typing' && m.room === room && m.name !== me.name) typers[m.name] = Date.now();
-  else if (m.t === 'members') renderMembers(m);
-  else if (m.t === 'err') { setStatus(m.text); setTimeout(() => setStatus(''), 2000); }
-}
-
-function add(m) {
-  const d = h('div', 'msg'), col = h('div'), head = h('div'), av = h('div', 'av', m.name[0].toUpperCase());
-  d.dataset.id = m.id; av.style.background = m.color;
-  head.append(h('span', 'who', m.name), h('span', 'ts', new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })));
-  if (m.uid === me.id || me.admin) {
-    const x = h('button', 'x', '✕'); x.title = 'Delete'; x.onclick = () => send({ t: 'del', id: m.id }); head.append(x);
-  }
-  col.append(head, h('div', 'body', m.text)); d.append(av, col);
-  const L = $('#log'), stick = L.scrollTop + L.clientHeight >= L.scrollHeight - 40;
-  L.append(d); if (stick) L.scrollTop = L.scrollHeight;
-}
-
-function renderMembers(m) {
-  const box = $('#members'); box.replaceChildren();
-  for (const [label, list, off] of [['Online', m.online, 0], ['Offline', m.offline, 1]]) {
-    box.append(h('h2', '', label + ' — ' + list.length));
-    for (const u of list) {
-      const r = h('div', 'm' + (off ? ' off' : '')), d = h('span', 'dot');
-      d.style.background = u.color; r.append(d, h('span', '', u.name + (u.admin ? ' ★' : ''))); box.append(r);
-    }
-  }
-}
-
-function renderTyping() {
-  const n = Object.keys(typers).filter(k => Date.now() - typers[k] < 4000);
-  $('#typing').textContent = !n.length ? '' : n.length > 2 ? 'Several people are typing…' : n.join(' and ') + (n.length > 1 ? ' are' : ' is') + ' typing…';
-}
-setInterval(renderTyping, 1000);
-
-$('#send').onsubmit = e => {
-  e.preventDefault();
-  const t = $('#text').value.trim();
-  if (t) { send({ t: 'msg', text: t }); $('#text').value = ''; }
-};
-$('#text').oninput = () => { if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); send({ t: 'typing' }); } };
-$('#color').onchange = async e => { await api('color', { color: e.target.value }); me.color = e.target.value; };
-$('#out').onclick = () => api('logout', {}).then(() => location.reload());
-$('#membtn').onclick = () => $('#members').classList.toggle('show');
-
-$('#swap').onclick = e => {
-  e.preventDefault();
-  mode = mode === 'login' ? 'register' : 'login';
-  const r = mode === 'register';
-  $('#atitle').textContent = $('#asubmit').textContent = r ? 'Create account' : 'Log in';
-  $('#swap').textContent = r ? 'I already have an account' : 'Create an account';
-  $('#erow').hidden = !r; $('#p').autocomplete = r ? 'new-password' : 'current-password'; $('#err').textContent = '';
-};
-$('#authform').onsubmit = async e => {
-  e.preventDefault();
-  const body = { username: $('#u').value, password: $('#p').value };
-  if (mode === 'register') body.email = $('#e').value;
-  const r = await api(mode, body);
-  if (r.ok) boot(); else $('#err').textContent = r.error || 'Something went wrong. Try again.';
-};
-boot();
-
-// Same tab cloak + panic key as the other pages
-(function () {
-  var V = { google: ['Google', 'https://www.google.com/favicon.ico'], vocab: ['My Learning | Vocabulary.com', 'https://www.vocabulary.com/favicon.ico'], canvas: ['Canvas', 'https://canvas.instructure.com/favicon.ico'], drive: ['Google Drive', 'https://drive.google.com/favicon.ico'], docs: ['Google Docs', 'https://docs.google.com/favicon.ico'] }, v;
-  try { v = V[localStorage.getItem('tabCloaker')]; } catch (e) {}
-  if (v) { document.title = v[0]; document.querySelector("link[rel~='icon']").href = v[1]; }
-})();
-document.addEventListener('keydown', function (e) {
-  var t = e.target;
-  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-  var k = 'k', go = true, u = 'https://classroom.google.com';
-  try { k = localStorage.getItem('dotgui_panic_key') || k; go = (localStorage.getItem('dotgui_panic_redirect') || 'true') === 'true'; u = localStorage.getItem('dotgui_panic_url') || u; } catch (x) {}
-  if ((e.key || '').toLowerCase() !== k.toLowerCase()) return;
-  document.title = 'Google';
-  var f = document.querySelector("link[rel~='icon']"); if (f) f.href = 'https://www.google.com/favicon.ico';
-  if (go) location.href = u;
-});
-</script>
 </body>
+  <script>
+    (function() {
+      const value = localStorage.getItem('tabCloaker') || 'default';
+      const favicon = document.querySelector("link[rel~='icon']") || (() => {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+        return link;
+      })();
+      if (value === 'google') {
+        document.title = 'Google';
+        favicon.href = 'https://www.google.com/favicon.ico';
+      } else if (value === 'vocab') {
+        document.title = 'My Learning | Vocabulary.com';
+        favicon.href = 'https://www.vocabulary.com/favicon.ico';
+      } else if (value === 'canvas') {
+          document.title = 'Canvas';
+          favicon.href = 'https://canvas.instructure.com/favicon.ico';
+        } else if (value === 'drive') {
+          document.title = 'Google Drive';
+          favicon.href = 'https://drive.google.com/favicon.ico';
+        } else if (value === 'docs') {
+          document.title = 'Google Docs';
+          favicon.href = 'https://docs.google.com/favicon.ico';
+        } else {
+        favicon.href = 'favicon.ico';
+      }
+    })();
+  </script>
 </html>
