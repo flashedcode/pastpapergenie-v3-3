@@ -1,17 +1,11 @@
-// Vercel serverless function: POST /api/ai
-// The Groq key lives in the GROQ_API_KEY environment variable on Vercel. It is never sent to the browser.
 
 const SUPABASE_URL = 'https://rdmvncnjmnpjqixfuzpt.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_rlTlh1l60XasCYbApw1QcA_zWU33wgM'; // publishable key, safe to include
+const SUPABASE_KEY = 'sb_publishable_rlTlh1l60XasCYbApw1QcA_zWU33wgM';
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 const SYSTEM =
-  'You are the study helper on pastpapergenie, a site used by school students. ' +
-  'Help with school subjects, revision, past-paper questions and explaining ideas step by step. ' +
-  'Keep answers clear and fairly short. Do not just hand over finished coursework or assessed work; ' +
-  'explain how to approach it instead. Keep everything age-appropriate and refuse sexual content, ' +
-  'self-harm instructions, weapons and illegal activity. If someone seems upset or unsafe, be kind and ' +
-  'suggest talking to a trusted adult. Never ask for or repeat personal information.';
+  'You are the ai on pastpapergenie, a site used by school students. ' 
+;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -21,7 +15,6 @@ module.exports = async function handler(req, res) {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Log in first.' });
 
-  // Clean the conversation: last 10 turns, only user/assistant, capped length
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
   const raw = body && Array.isArray(body.messages) ? body.messages.slice(-10) : [];
@@ -32,7 +25,6 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Send a message first.' });
   }
 
-  // Check the user is signed in, not banned, and under their daily limit (runs as the user)
   let left;
   try {
     const q = await fetch(SUPABASE_URL + '/rest/v1/rpc/ai_take_turn', {
