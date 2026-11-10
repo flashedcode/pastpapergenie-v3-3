@@ -7,7 +7,7 @@ const SYSTEM =
   'You are the ai on pastpapergenie, a site used by school students. ' 
 ;
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only.' });
   if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'The AI is not set up yet.' });

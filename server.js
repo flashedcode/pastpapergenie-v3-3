@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = 3000;
 const HOST = '0.0.0.0';
 
 app.use(express.json());
@@ -33,6 +33,48 @@ express.static.mime.define({
   'application/wasm': ['wasm'],
   'text/javascript': ['mjs', 'js']
 });
+
+// Serve Ultraviolet, BareMux, and Epoxy transports
+const uvDist = path.join(__dirname, 'node_modules/@titaniumnetwork-dev/ultraviolet/dist');
+const bareMuxDist = path.join(__dirname, 'node_modules/@mercuryworkshop/bare-mux/dist');
+const epoxyDist = path.join(__dirname, 'node_modules/@mercuryworkshop/epoxy-transport/dist');
+
+app.use('/uv', express.static(uvDist));
+app.use('/baremux', express.static(bareMuxDist));
+app.use('/epoxy', express.static(epoxyDist));
+
+// Service worker endpoint with required Service-Worker-Allowed header
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'text/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(uvDist, 'sw.js'));
+});
+
+// Proxy endpoint for web unblocking fallback
+app.get('/api/proxy', async (req, res) => {
+  const target = req.query.url;
+  if (!target || typeof target !== 'string') return res.status(400).send('Missing url');
+  try {
+    const fetchRes = await fetch(target, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    const ctype = fetchRes.headers.get('content-type') || 'text/html';
+    res.setHeader('Content-Type', ctype);
+    if (ctype.includes('text/html')) {
+      let html = await fetchRes.text();
+      html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${target}">`);
+      return res.send(html);
+    }
+    const buf = await fetchRes.arrayBuffer();
+    return res.send(Buffer.from(buf));
+  } catch (err) {
+    return res.status(502).send(`Proxy error: ${err.message}`);
+  }
+});
+
 
 // AI Study helper endpoint for /ai/index.html & /ai.html
 app.post('/api/ai', async (req, res) => {
