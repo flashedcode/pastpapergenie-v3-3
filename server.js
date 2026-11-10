@@ -131,6 +131,13 @@ app.post('/api/ai', async (req, res) => {
   }
 });
 
+// Serve Vercel Analytics from node_modules
+app.use('/_vercel/analytics', express.static(path.join(__dirname, 'node_modules/@vercel/analytics/dist'), {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+}));
+
 // Static assets
 app.use(express.static(__dirname, {
   extensions: ['html', 'htm'],
