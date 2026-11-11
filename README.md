@@ -17,7 +17,7 @@
 * [x] Anime
 * [x] Movies
 * [x] Series
-* [ ] Chatroom
+* [x] Chatroom
 * [ ] Music
 * [ ] Browser with extentions
 
